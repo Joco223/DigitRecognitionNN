@@ -4,6 +4,7 @@
 #include <time.h>
 #include <cmath>
 #include <vector>
+#include <algorithm>
 
 #include "Matrix.h"
 
@@ -22,6 +23,34 @@ double sigmoidePrime(double x) {
 	return exp(-x)/(pow(1+exp(-x), 2));
 }
 
+double tanH(double x) {
+	return tanh(x);
+}
+
+double tanhPrime(double x) {
+	return 1 - tanh(x)*tanh(x);
+}
+
+double relu(double x) {
+	if(x > 0) {
+		if(x > 6) {
+			return 6;
+		}else{
+			return x;
+		}
+	}else{
+		return 0;
+	}
+}
+
+double reluPrime(double x) {
+	if(x > 0) {
+		return 1;
+	}else{
+		return 0;
+	}
+}
+
 std::vector<std::vector<double>> loadImageData(std::string path, int numOfImages) {
 	std::ifstream file;
 	file.open(path, std::ios::binary);
@@ -37,7 +66,8 @@ std::vector<std::vector<double>> loadImageData(std::string path, int numOfImages
 
 	for(int i = 0; i < numOfImages * 28 * 28; i++) {
 		if(i % (28 * 28 + 1) == 0) { currentPic++; }
-		imageData[currentPic].push_back((buffer[i + 16] / 255));
+		//if(buffer[i + 16] != 0) {std::cout << (int)(unsigned char)buffer[i + 16] << '\n'; }
+		imageData[currentPic].push_back(buffer[i + 16]);
 	}
 
 	for(int i = 0; i < numOfImages; i++) {
@@ -130,30 +160,63 @@ int main(int argc, char** args) {
 	std::vector<std::vector<double>> testImageData = loadImageData("test_data.idx3-ubyte", 10000);
 	std::vector<std::vector<double>> trainingLabelData = loadLabelData("training_labels.idx1-ubyte", 60000);
 	std::vector<std::vector<double>> testLabelData = loadLabelData("test_labels.idx1-ubyte", 10000);
+	
+	/*for(int i = 0; i < 27; i++) {
+		for(int j = 0; j < 27; j++){
+			if(trainingImageData[0][i*28+j] != 0) {
+				std::cout << "1";
+			}else{
+				std::cout << "0";
+			}
+		}
+		std::cout << '\n';
+	}*/
 
 	srand(time(NULL));
 
-	init(784, 32, 10, 0.1);
+	init(784, 12, 10, 0.001);
+	
+	int batchSize = 2000;
+	int iterationCount = 1;
 
-	for (int i = 0; i < 10; i++) {
-		for (int j = 0; j < 50000; j++) {
+	for (int i = 0; i < iterationCount; i++) {	
+		//Train
+		for (int j = 0; j < batchSize; j++) {
 			computeOutput(trainingImageData[j]);
 			learn(trainingLabelData[j]);
 		}
-		std::cout << "#" << i+1 << "/10" << '\n';
+		
+		//Test
+		int total = 0;
+		for (int j = 0; j < 300; j++) {
+			Matrix test = computeOutput(testImageData[j]);
+			double error;
+			for (int k = 0; k < 10; k++) {
+				error += test.data[0][k] - testLabelData[j][k];
+			}
+			if (error < 0.3) {total++;}
+		}
+		
+		std::cout << "#" << i+1 << "/" << iterationCount << " iteration, accuracy: " << (total/300.0) << '\n';
 	}
 
-	for (int i = 0; i < 8000; i++) {
-		Matrix test = computeOutput(trainingImageData[i]).applyFunction(stepFunction);
+	/*for (int i = 0; i < 300; i++) {
+		Matrix test = computeOutput(testImageData[i]);
+		double normalizer = *std::max_element(test.data[0].begin(), test.data[0].end());
 		for (int j = 0; j < 10; j++) {
-			std::cout << trainingLabelData[i][j] << " ";	 
+			std::cout << testLabelData[i][j] << " ";	 
 		}
 		std::cout << ": ";
 		for (int j = 0; j < 10; j++) {
-			std::cout << test.data[0][j] << " ";	 
+			std::cout << test.data[0][j] << " ";
+			if(normalizer != 0) {
+				std::cout << (test.data[0][j] / normalizer) << " ";	 
+			}else{
+				std::cout << test.data[0][j] << " ";
+			}	
 		}
 		std::cout << '\n';
-	}
+	}*/
 
 	return 0;
 }

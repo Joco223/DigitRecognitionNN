@@ -75,7 +75,7 @@ Matrix Matrix::dot(Matrix const &m) const {
 	for(i = 0; i < height; i++) {
 		for(j = 0; j < mwidth; j++) {
 			for(h = 0; h < width ; h++) {
-				w += data[i][h]*m.data[h][j];
+				w += data[i][h] * m.data[h][j];
 			}
 			result.data[i][j] = w;
 			w = 0;
